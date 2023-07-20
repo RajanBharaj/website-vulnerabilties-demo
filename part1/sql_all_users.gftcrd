@@ -1,0 +1,1 @@
+{"merchant_id": "Tandon Food Court Card", "customer_id": "observer@gmail.com", "total_value": "25", "records": [{"record_type": "amount_change", "amount_added": 2000, "signature": "' UNION SELECT username FROM LegacySite_user--"}]}

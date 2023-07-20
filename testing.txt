@@ -1,0 +1,22 @@
+- Path errors [linux, win]
+-> $ export PYTHONPATH="${PYTHONPATH}:/mnt/c/Users/Raj/Documents/NYU/Academic/Senior_2020-22/2021-2022/Fall_2022/App_Security/Assignments/homework-2-RajanBharaj"
+-> $ set PYTHONPATH=%PYTHONPATH%;C:\Users\Raj\Documents\NYU\Academic\Senior_2020-22\2021-2022\Fall_2022\App_Security\Assignments\homework-2-RajanBharaj
+
+- Settings errors [linux, win]
+-> $ export DJANGO_SETTINGS_MODULE=GiftcardSite.settings
+-> $ set DJANGO_SETTINGS_MODULE=GiftcardSite.settings
+
+- Database interaction
+-> $ sqlite3 db.sqlite3
+-> sqlite> .schema LegacySite_card; 
+-> sqlite> .exit
+- Clean whole database: python manage.py flush
+- Restore original values; python import_dbs.py
+
+- Self created users, pass's
+-> victim@bad.edu, hello123
+-> attacker@good.edu, secure123
+-> observer@gmail.com, lookatme123
+
+- Testing
+-> python manage.py dumpdata LegacySite > LegacySite/fixtures/testdata.json

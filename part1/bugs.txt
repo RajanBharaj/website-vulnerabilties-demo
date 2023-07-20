@@ -1,0 +1,78 @@
+1. XSS vulnerability: Reflected XSS
+- using page '/buy.html' or '/buy/[0-7]' from template 'item-single.html'
+- using page '/gift.html' or '/gift/[0-7]' from template 'gift.html'
+- called by 'buy_card_view(x,y)', 'gift_card_view(x,y)' in views.py
+- [views.py]: above methods takes a parameter 'director' which is an open variable 
+- xss exploited by appending '?director=<script>alert("The director says hello.")</script>' to get request of vulnerable pages
+- {director|safe} in templates 'item-single.html', 'gift.html': safe tag disables django default auto escape
+- Using 'safe' allows for the insertion and run of any <script></script> when placed into the 'director' query parameter of URL
+
+-> Examples:
+-> '/buy.html?director=<script>alert("The director says hello.")</script>' [always displays alert(str)]
+-> '/buy/2?director=<script>alert("The director says hello.")</script>' [always displays alert(str)]
+-> '/gift.html?director=<script>alert(document.cookie)</script>' [displays alert(cookie) if logged in]
+-> '/gift/6?director=<script>alert(document.cookie)</script>' [displays alert(cookie) if logged in]
+
+FIX: fixed by removing 'safe' tag from 'director' attribute in templates, defaulting to django's escape tag functionality
+-------------------------------------------------------------------------------------------------------------------------------------
+2. CSRF vulnerability: Secretly gifted giftcard by overcoming SESSION_COOKIE_SAMESITE = "Lax" using 'GET' request 
+- using '/gift.html' or '/gift/[0-7]' from template 'gift.html'
+- called by 'gift_card_view(x,y)' in views.py
+- 'gift_card_view(x,y)' takes a parameter 'username' which (even if escaped) causes a gift card to immediately be sent to the username
+- exploited by appending '?username=attacker@good.edu' to get request of vulnerable pages "/gift.html", '/gift/[0-7]'
+
+--second exploitation using './part1/CSRF/attack.html'
+--if victim user visits attack.html, a gift card will be sent immediately to 'attacker@good.edu'
+
+-> Examples:
+-> '/gift.html?username=attacker@good.edu'
+-> '/gift/6?username=attacker@good.edu' [for max money]
+-> user visits 'attack.html' page found in './part1/csrf/attack.html'
+
+NOTE: In 'settings.py': SESSION_COOKIE_SAMESITE = 'Lax'
+- This site [before fix] uses cookie-based session handling
+- Due to this setting, CSRF vulnerabilities exploiting 'POST' requests fail because 'Lax' enusures
+--session cookie is only sent in 'GET' requests, NOT in 'POST' request
+- This means you cannot submit a form to request any sum of money you want, therefore instead of using
+--forms (which use 'POST'), 'attack.html' simply loads the vulnerable URL mentoined above in a <script></script>
+-> Nevertheless, this vulnerable URL successfully delivers the exploit to any logged in user
+
+FIX: Use crsf tokens to doubly protect 'POST' method, and add password protect to vulnerable URL via 'GET' 
+-> Example GET request:
+-> '/gift/6?username=attacker@good.edu&password=[logged_in_user_pass]'
+-> NOTE: 'username' in the above request is the recipient of the gift, and 'password' is the sender's password
+-------------------------------------------------------------------------------------------------------------------------------------
+3. SQL Injection vulnerability: Get salted(password)
+- using '/use.html' from template 'use-card.html'
+- called by 'use_card_view(x)' in views.py
+- [views.py]: 'card_query' loads variable 'signature' from submitted(uploaded) card directly into SQL request
+- Gifcard files can be created then submitted(uploaded) with signatures appending the SQL request using [' UNION]
+
+-> Example files: sql_amin_pass, sql_all_pass, sql_all_users
+-> Example files found in '/part1' demonstrate retreiving admin pass, all user pass's and all usernames from DB
+
+FIX: Use '.raw' methods parameter 'params' to correctly quote 'signature' without escaping to SQL query concatenation
+------------------------------------------------------------------------------------------------------------------------------------
+4. Command Injection:
+- using '/use.html' from template 'use-card.html'
+- called by 'use_card_view(x)' in views.py
+- [views.py]: parse_card_data(x,y) method attempts to decode using json, 
+-- however, upon failure, uses platform executables to load binary data 
+
+-> Exploitation by raising a JSONDecodeError (from within gifcard file) to parse data via platform executables
+-> When using executables, 'parse_card_data(x,y)' directly makes a system call in [extras.py]
+-> System call can be appended by submitted filename in './use.html'
+-> Exploitation in 'use.html' by uploading 'command_injection.gftcrd' with 
+--> filename = 'something & echo command injection success &'
+
+FIX: change submitted filename in [views.py]'use_card_view(x)' before pass to [extras.py]'parse_card_data(x,y)'
+-> filename stripped of non-alpha numeric characters
+------------------------------------------------------------------------------------------------------------------------------------
+Other broken functionality:
+- SESSION_COOKIE_HTTPONLY = False -> allows any client-side JS to retrieve session cookie, reset to 'True' to prevent this [FIXED]
+- Gifting a card via 'GET' throws an Integrity Error, and gifts 2 cards instead of 1. Integrity Error no longer present after
+--'GET' vulnerable URL fix via password authenticate. However, gifting via 'GET' still gifts 2 giftcards.
+- Attempting to buy a card while not logged in throws a type error instead of redirecting to login page [FIXED]
+- Attempting to register as existing user throws and integrity error [FIXED]
+- Signature JSON decode error breaks site, fixed with fake signature if JSON decode error raised [FIXED]
+- If no card file given when submitted 'use.html' throws an error, fixed with try, except [FIXED]

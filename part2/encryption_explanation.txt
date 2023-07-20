@@ -1,0 +1,96 @@
+- Implementing database encryption: djfernet
+
+Choice of package: djfernet [API]
+- This project uses python 3 and django version 4.1.7 which are both supported
+-- by djfernet package, but remain unsupported for many older DB encryption packages
+
+NOTES:
+1. Fields[username, password, using primary key, using foreign key] CANNOT be encrypted, 
+--- due to functionality issues. Therefore, passwords hashed before storage.
+- This means realistically the most reasonable things to encrypt would be product and card fields
+-- from 'LegacySite_card' and 'LegacySite_product' tables in database.
+
+2. All encryption field types output as binary data 'BinaryField' on database.
+--- This means that in order to encrypt any data that is not already a binary field,
+---- python migrations must be reversed.
+
+
+Implementation steps [LOG]:
+1. Clean whole database so that all unencrypted data is removed:
+-> $ python manage.py flush
+
+2. Reverse python LegacySite migrations so that any LegacySite model fields can be encrypted using djfernet:
+-> $ python manage.py showmigrations [view all migrations]
+-> $ python manage.py migrate LegacySite zero [remove legacy site migrations]
+-> delete unapplied file
+
+3. Edit LegacySite/models.py to encrypt fields.
+
+4. Re-migrate:
+-> $ python manage.py makemigrations LegacySite
+-> $ python manage.py migrate
+
+3. Restore original values:
+-> $ python import_dbs.py 
+a. if settings error raised:
+-> $ export DJANGO_SETTINGS_MODULE=GiftcardSite.settings
+-> $ python import_dbs.py 
+
+4. Run site:
+-> $ python manage.py runserver
+
+5. Testing: Register users and test buying/gifting/using cards
+--- A list of users created for testing and more info in 'testing.txt'
+-> $ python manage.py dumpdata LegacySite > LegacySite/fixtures/testdata.json 
+--- Make folder 'LegacySite/fixtures' if not already made
+
+Choice of fields: [Card.data (req), Card.amount, Card.fp, Product.recommended_price, product_image_path]
+1. 'Card.data' encrypted as per assignment instructions so that stolen card cannot be used
+
+2. Chose to encrypt 'Card.amount', so that upon data breach, attacker cannot easily 
+--- view/use card with highest value
+
+3. Chose to encrypt 'Card.fp' [card_file_path], so that upon data breach, attacker cannot easily 
+--- view/use system's file path
+
+4. Chose to encrypt 'Product.recommended_price', so that upon data breach, attacker cannot easily 
+--- determine highest recommended valued card (for default values)
+
+5. Chose to encrypt 'Product.product_image_path', so that upon data breach, attacker cannot easily 
+--- determine system's file path
+
+NOTE: chose not to encrpyt other fields due to inability to encrypt (username,password,keys) or 
+- due to determination that data encrryption of these fields was not necessary
+
+Code changes due to encryption implementation:
+- 'LegacySite/models.py' changed to reflect new encrypted models
+- 'GiftcardSite/settings.py' changed so that secret key not displayed
+-- and is imported from environment variable (via '.env') file
+
+Key management strategy and explanation:
+-> $ pip install python-dotenv
+- Used environment variables to store key(s)
+- Use environment variables via '.env' file for multi-platform support 
+- Added '.env' file to '.gitignore' so that file remains untracked
+- Created 'gen_key.py' file so users can generate there own new keys if repo cloned
+- A testing key is given as defualt in 'settings.py' so that tests can run [DELETE on git clone] 
+
+- Django throws an error if SECRET_KEY is not set, therefore instead of using
+-- FERNET_KEYS[], decided to stick with SECRET_KEY
+- Used my own 'gen_key.py' file to create new unkown secret key
+
+- Decided to use environment variable to store key(s) as it was the easiest to implement safely
+- Used ".env" file method for multi-platform support and easy to add to '.gitignore'
+
+Creating your own SECRET_KEY:
+- clone this repo from github
+- [DELETE] 'testing' key and 'if:else:' block from settings.py
+-- should be: SECRET_KEY = os.environ.get('NAME')
+- in top level directory, create ".env" file
+- add '.env' file to '.gitignore'
+- install 'python-dotenv'
+- run 'gen_key.py'
+- Add 'NAME=[generatedkey]' to .env file
+
+-> $ pip install python-dotenv
+-> $ python gen_key.py
