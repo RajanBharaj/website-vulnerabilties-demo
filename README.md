@@ -23,7 +23,7 @@ For each vulnerability above, the project also implements and documents the corr
 
 ## Written Report
 
-Please see the "testing.txt" documentation for further explanation.
+Please see the "/part1/bugs.txt" documentation for further explanation of web vulnerabilities. Please see the "/part2/encryption_explanation.txt" for more details on the encryption used to mitigate demonstrated vulnerabilities. 
 
 ## Running Locally
 
@@ -36,7 +36,7 @@ python manage.py runserver
 
 ## Context
 
-Originally developed as part of NYU's Application Security coursework and independently extended. The "HW2_Instructions.md" and "testing.txt" documents give context to the work independently completed. 
+Originally developed as part of NYU's Application Security coursework and independently extended. The "HW2_Instructions.md" and "*.txt" documents provide context for the independently completed work. 
 
 ## Disclaimer
 
